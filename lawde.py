@@ -83,7 +83,7 @@ class Lawde(object):
                 ts2 = datetime.datetime.now()
                 ts_diff = ts2 - ts1
                 print("Estimated download time: %d minutes" % (
-                    (ts_diff.seconds * len(laws)/10) / 60)
+                    (ts_diff.seconds * len(laws) / 10) / 60)
                 )
             if i % 10 == 0:
                 print('%.1f%%' % (i / total * 100), end='\r')
@@ -124,7 +124,7 @@ class Lawde(object):
 
     def get_all_laws(self):
         with open(self.lawlist) as f:
-            return [l['slug'] for l in json.load(f)]
+            return [law['slug'] for law in json.load(f)]
 
     def loadall(self):
         self.load(self.get_all_laws())
@@ -133,7 +133,8 @@ class Lawde(object):
         BASE_URL = 'http://www.gesetze-im-internet.de/Teilliste_%s.html'
         CHARS = 'abcdefghijklmnopqrstuvwxyz0123456789'
         # Evil parsing of HTML with regex'
-        REGEX = re.compile('href="\./([^\/]+)/index.html"><abbr title="([^"]*)">([^<]+)</abbr>')
+        REGEX = re.compile(
+            'href="\./([^\/]+)/index.html"><abbr title="([^"]*)">([^<]+)</abbr>')  # noqa
 
         laws = []
 

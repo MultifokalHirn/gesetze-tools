@@ -42,6 +42,7 @@ def ctext(el):
             result.append(sel.tail)
     return "".join(result)
 
+
 slugify_re = re.compile('[^a-z]')
 
 
@@ -51,7 +52,7 @@ def slugify(key):
 
 class VkblScraper(object):
     URL = 'http://www.verkehr-data.com/docs/artikelsuche.php?seitenzahl=1&anzahl=10000&start=0&Titel=&Datum=&Muster=&Muster2=&Jahrgang=%d&VerordnungsNr=&Seite=&Bereichsname=&DB=&Aktenzeichen='
-    PRICE_RE = re.compile('Preis: (\d+,\d+) \((\d+) Seite')
+    PRICE_RE = re.compile(r'Preis: (\d+,\d+) \((\d+) Seite')
 
     def scrape(self, low=1947, high=datetime.datetime.now().year):
         items = {}
@@ -82,7 +83,9 @@ class VkblScraper(object):
                 except ValueError:
                     genre = header
                     edition = ''
-                title = ctext(trs[1].cssselect('td')[0]).replace('Titel:', '').strip().splitlines()
+                title = ctext(
+                    trs[1].cssselect('td')[0]).replace(
+                    'Titel:', '').strip().splitlines()
                 title = [t.strip() for t in title if t.strip()]
                 title, description = title[0], '\n'.join(title[1:])
                 extra = {}
@@ -94,10 +97,12 @@ class VkblScraper(object):
                         extra[slugify(key)] = value
                     elif len(tds) == 1:
                         if tds[0].cssselect('img[src="../images/orange.gif"]'):
-                            extra['link'] = tds[0].cssselect('a')[0].attrib['href']
+                            extra['link'] = tds[0].cssselect(
+                                'a')[0].attrib['href']
                             extra['vid'] = extra['link'].split('=')[-1]
                             match = self.PRICE_RE.search(tds[0].text_content())
-                            extra['price'] = float(match.group(1).replace(',', '.'))
+                            extra['price'] = float(
+                                match.group(1).replace(',', '.'))
                             extra['pages'] = int(match.group(2))
                 data = dict(extra)
                 data.update({
@@ -131,6 +136,7 @@ def main(arguments):
     data.update(vkbl.scrape(minyear, maxyear))
     with file(arguments['<outputfile>'], 'w') as f:
         json.dump(data, f)
+
 
 if __name__ == '__main__':
     from docopt import docopt

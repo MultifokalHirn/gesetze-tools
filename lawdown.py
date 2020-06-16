@@ -24,10 +24,13 @@ from glob import glob
 from xml import sax
 from collections import defaultdict
 from textwrap import wrap
-from StringIO import StringIO
+try:
+    from StringIO import StringIO
+except ImportError:
+    from io import StringIO
 
+# from ruamel.yaml import yaml
 import yaml
-
 
 DEFAULT_YAML_HEADER = {
     'layout': 'default'
@@ -52,23 +55,25 @@ class LawToMarkdown(sax.ContentHandler):
     current_heading_num = 1
     current_footnote = None
     no_emph_re = [
-        re.compile('(\S?|^)([\*_])(\S)'),
-        re.compile('([^\\\s])([\*_])(\S?|$)')
+        re.compile(r'(\S?|^)([\*_])(\S)'),
+        re.compile(r'([^\\\s])([\*_])(\S?|$)')
     ]
-    list_start_re = re.compile('^(\d+)\.')
+    list_start_re = re.compile(r'^(\d+)\.')
 
     def __init__(self, fileout,
-            yaml_header=DEFAULT_YAML_HEADER,
-            heading_anchor=False,
-            orig_slug=None):
+                 yaml_header=DEFAULT_YAML_HEADER,
+                 heading_anchor=False,
+                 orig_slug=None):
         self.fileout = fileout
         self.yaml_header = yaml_header
         self.heading_anchor = heading_anchor
         self.orig_slug = orig_slug
 
     def out(self, content):
-        if isinstance(content, unicode):
-            content = content.encode('utf-8')
+        if isinstance(content, str):
+            content = content
+        else:
+            content = content.decode('utf-8')
         self.fileout.write(content)
         return self
 
@@ -87,7 +92,8 @@ class LawToMarkdown(sax.ContentHandler):
             indent = self.indent_level
         first_indent = ''
         if self.last_list_index is not None:
-            space_count = max(0, len(self.indent_by) - (len(self.last_list_index) + 1))
+            space_count = max(0, len(self.indent_by) -
+                              (len(self.last_list_index) + 1))
             first_indent = ' ' + self.indent_by[0:space_count]
             self.last_list_index = None
         for line in wrap(text):
@@ -158,7 +164,8 @@ class LawToMarkdown(sax.ContentHandler):
             self.write_list_item()
         elif name == 'img':
             self.flush_text()
-            self.out_indented('![%s](%s)' % (attrs.get('ALT', attrs['SRC']), attrs['SRC']))
+            self.out_indented('![%s](%s)' %
+                              (attrs.get('ALT', attrs['SRC']), attrs['SRC']))
         elif name == 'dt':
             self.in_list_index = True
         elif name in ('u', 'b', 'f'):
@@ -291,11 +298,11 @@ class LawToMarkdown(sax.ContentHandler):
         if self.yaml_header:
             meta.update(self.yaml_header)
             self.out(yaml.safe_dump(meta,
-                explicit_start=True,
-                explicit_end=False,
-                allow_unicode=True,
-                default_flow_style=False
-            ))
+                                    explicit_start=True,
+                                    explicit_end=False,
+                                    allow_unicode=True,
+                                    default_flow_style=False
+                                    ))
             # Blank line ensures meta doesn't become headline
             self.write('\n---')
         else:
@@ -306,7 +313,9 @@ class LawToMarkdown(sax.ContentHandler):
         self.write(heading)
         self.write()
         if 'ausfertigung-datum' in self.meta:
-            self.write(u'Ausfertigungsdatum\n:   %s\n' % self.meta['ausfertigung-datum'][0])
+            self.write(
+                u'Ausfertigungsdatum\n:   %s\n' %
+                self.meta['ausfertigung-datum'][0])
         if 'periodikum' in self.meta and 'zitstelle' in self.meta:
             self.write(u'Fundstelle\n:   %s: %s\n' % (
                 self.meta['periodikum'][0], self.meta['zitstelle'][0]))
@@ -351,7 +360,7 @@ class LawToMarkdown(sax.ContentHandler):
         hn = hn * min(heading_num, 6)
         if self.heading_anchor:
             if link:
-                link = re.sub('\(X+\)', '', link).strip()
+                link = re.sub(r'\(X+\)', '', link).strip()
                 link = link.replace(u'§', 'P')
                 link = u' [%s]' % link
         else:
@@ -372,7 +381,7 @@ class LawToMarkdown(sax.ContentHandler):
         }
         for k, v in replacements.items():
             abk = abk.replace(k, v)
-        abk = re.sub('[^\w-]', '_', abk)
+        abk = re.sub(r'[^\w-]', '_', abk)
         self.filename = abk
 
 
@@ -406,11 +415,15 @@ def main(arguments):
             continue
         paths.add(inpath)
         law_name = inpath.split('/')[-1]
-        with file(filename) as infile:
+        with open(filename) as infile:
             out = law_to_markdown(infile)
         slug = out.filename
-        outpath = os.path.abspath(os.path.join(arguments['<outputpath>'], slug[0], slug))
-        print outpath
+        outpath = os.path.abspath(
+            os.path.join(
+                arguments['<outputpath>'],
+                slug[0],
+                slug))
+        print(outpath)
         assert outpath.count('/') > 2  # um, better be safe
         outfilename = os.path.join(outpath, 'index.md')
         shutil.rmtree(outpath, ignore_errors=True)
@@ -420,7 +433,7 @@ def main(arguments):
                 continue
             part_filename = os.path.basename(part)
             shutil.copy(part, os.path.join(outpath, part_filename))
-        with file(outfilename, 'w') as outfile:
+        with open(outfilename, 'w') as outfile:
             outfile.write(out.getvalue())
         out.close()
 

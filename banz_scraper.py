@@ -13,7 +13,7 @@ Options:
 Duration Estimates:
   2-5 minutes per year
   30-75 minutes in total
-  
+
 
 """
 import os
@@ -34,8 +34,19 @@ class BAnzScraper(object):
             '&%%28page.navid%%3Dofficial_starttoofficial_start_update%%29='
             'Veröffentlichungen+anzeigen')
 
-    MONTHS = [u'Januar', u'Februar', u'März', u'April', u'Mai', u'Juni', u'Juli',
-            u'August', u'September', u'Oktober', u'November', u'Dezember']
+    MONTHS = [
+        u'Januar',
+        u'Februar',
+        u'März',
+        u'April',
+        u'Mai',
+        u'Juni',
+        u'Juli',
+        u'August',
+        u'September',
+        u'Oktober',
+        u'November',
+        u'Dezember']
 
     def get(self, url):
         return requests.get(url)
@@ -73,7 +84,9 @@ class BAnzScraper(object):
         root = lxml.html.fromstring(response.text)
         selector = 'select[name="genericsearch_param.edition"] option'
         for option in root.cssselect(selector):
-            dates.append((option.attrib['value'], option.text_content().strip()))
+            dates.append(
+                (option.attrib['value'],
+                 option.text_content().strip()))
         return dates
 
     def get_items(self, year, date):
@@ -94,7 +107,7 @@ class BAnzScraper(object):
                     additional.append(c.tail.strip())
             orig_date = None
             for a in additional:
-                match = re.search('[Vv]om (\d+)\. (\w+) (\d{4})', a, re.U)
+                match = re.search(r'[Vv]om (\d+)\. (\w+) (\d{4})', a, re.U)
                 if match is not None:
                     day = int(match.group(1))
                     month = self.MONTHS.index(match.group(2)) + 1
@@ -102,7 +115,7 @@ class BAnzScraper(object):
                     orig_date = '%02d.%02d.%d' % (day, month, year)
                     break
             name = link.text_content()[1:]
-            name = re.sub('\s+', ' ', name)
+            name = re.sub(r'\s+', ' ', name)
             ident = tds[2].text_content().strip()
             items[ident] = {
                 'ident': ident,
@@ -128,6 +141,7 @@ def main(arguments):
     data.update(banz.scrape(minyear, maxyear))
     with file(arguments['<outputfile>'], 'w') as f:
         json.dump(data, f)
+
 
 if __name__ == '__main__':
     from docopt import docopt

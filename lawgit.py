@@ -31,11 +31,12 @@ class BGBlSource(object):
     """BGBl as a source for law change"""
 
     change_re = [
-        re.compile(u'BGBl +(?P<part>I+):? *(?P<year>\d{4}), +(?:S\. )?(?P<page>\d+)'),
-        re.compile(u'BGBl +(?P<part>I+):? *(?P<year>\d{4}), \d \((?P<page>\d+)\)'),
-        re.compile(u'BGBl +(?P<part>I+):? *(?P<year>\d{4}), (?P<page>\d+)'),
-        re.compile('\d{1,2}\.\.?\d{1,2}\.\.?(?P<year>\d{4}) (?P<part>I+) (?:S\. )?(?P<page>\d+)'),
-        re.compile(u'(?P<year>\d{4}).{,8}?BGBl\.? +(?P<part>I+):? +(?:S\. )?(?P<page>\d+)'),
+        re.compile(rur'BGBl +(?P<part>I+):? *(?P<year>\d{4}), +(?:S\. )?(?P<page>\d+)'),
+        re.compile(rur'BGBl +(?P<part>I+):? *(?P<year>\d{4}), \d \((?P<page>\d+)\)'),
+        re.compile(rur'BGBl +(?P<part>I+):? *(?P<year>\d{4}), (?P<page>\d+)'),
+        re.compile(
+            r'\d{1,2}\.\.?\d{1,2}\.\.?(?P<year>\d{4}) (?P<part>I+) (?:S\. )?(?P<page>\d+)'),
+        re.compile(rur'(?P<year>\d{4}).{,8}?BGBl\.? +(?P<part>I+):? +(?:S\. )?(?P<page>\d+)'),
         # re.compile(u'Art. \d+ G v. (?P<day>\d{1,2}).(?P<month>\d{1,2}).(?P<year>\d{4})')
     ]
 
@@ -122,8 +123,8 @@ class BAnzSource(object):
     def find_candidates(self, lines):
         candidates = []
         for line in lines:
-            line = re.sub('[^\w \.]', '', line)
-            line = re.sub(' \d{4} ', ' ', line)
+            line = re.sub(r'[^\w \.]', '', line)
+            line = re.sub(r' \d{4} ', ' ', line)
             for key in self.data:
                 if key in line:
                     if u"noch nicht berücksichtigt" in line:
@@ -168,7 +169,7 @@ class VkblSource(object):
     )
 
     change_re = [
-        re.compile(u'VkBl: *(?P<year>\d{4}),? +(?:S\. )?(?P<page>\d+)')
+        re.compile(rur'VkBl: *(?P<year>\d{4}),? +(?:S\. )?(?P<page>\d+)')
     ]
 
     def __init__(self, source):
@@ -224,7 +225,9 @@ class VkblSource(object):
         {u'description': u'', u'vid': u'19463', u'seite': u'945', u'price': 3.4, u'edition': u'23/2012', u'aufgehobenam': u'', 'date': u'15.12.2012', u'verffentlichtam': u'15.12.2012', u'pages': 9, u'title': u'Verordnung \xfcber die Betriebszeiten der Schleusen und Hebewerke an den Bundeswasserstra\xdfen im Zust\xe4ndigkeitsbereich der Wasser- und Schifffahrtsdirektion Ost', u'jahr': u'2012', u'inkraftab': u'01.01.2013', u'verkndetam': u'22.11.2012', u'link': u'../shop/in_basket.php?vID=19463', u'aktenzeichen': u'', u'genre': u'Wasserstra\xdfen, Schifffahrt', u'vonummer': u'215'}"
         """
         entry = dict(self.data[key])
-        return ('%(title)s\n\n%(verkndetam)s: %(edition)s S. %(seite)s (%(vonummer)s)' % entry)
+        return (
+            '%(title)s\n\n%(verkndetam)s: %(edition)s S. %(seite)s (%(vonummer)s)' %
+            entry)
 
 
 class LawGit(object):
@@ -253,7 +256,8 @@ class LawGit(object):
                 continue
             source, key = result
             date = source.get_date(key)
-            if not self.consider_old and date + timedelta(days=30 * 12) < datetime.now():
+            if not self.consider_old and date + \
+                    timedelta(days=30 * 12) < datetime.now():
                 print "Skipped %s %s (too old)" % (law, result)
                 continue
             branch_name = source.get_branch_name(key)
@@ -267,7 +271,7 @@ class LawGit(object):
         wdiff = hcommit.diff(None, create_patch=True)
         for diff in wdiff:
             law_name = diff.b_blob.path.split('/')[1]
-            if self.grep and not self.grep in law_name:
+            if self.grep and self.grep not in law_name:
                 continue
             filename = '/'.join(diff.b_blob.path.split('/')[:2] + ['index.md'])
             filename = os.path.join(self.path, filename)
@@ -277,7 +281,7 @@ class LawGit(object):
 
         for filename in self.repo.untracked_files:
             law_name = filename.split('/')[1]
-            if self.grep and not self.grep in law_name:
+            if self.grep and self.grep not in law_name:
                 continue
             self.laws[law_name].append(filename)
             filename = '/'.join(filename.split('/')[:2] + ['index.md'])
@@ -291,7 +295,8 @@ class LawGit(object):
         candidates = self.find_in_sources(lines)
         if not candidates:
             with file(filename) as f:
-                lines = [line.decode('utf-8') for line in f.read().splitlines()]
+                lines = [line.decode('utf-8')
+                         for line in f.read().splitlines()]
             candidates.extend(self.find_in_sources(lines))
         if not candidates:
             return None
@@ -301,7 +306,8 @@ class LawGit(object):
         candidates = []
         for source in self.sources:
             try:
-                candidates.extend([(source, c) for c in source.find_candidates(lines)])
+                candidates.extend([(source, c)
+                                   for c in source.find_candidates(lines)])
             except TransientState:
                 return []
         return candidates
@@ -360,6 +366,7 @@ def main(arguments):
 
     if arguments['autocommit']:
         lg.autocommit()
+
 
 if __name__ == '__main__':
     from docopt import docopt
